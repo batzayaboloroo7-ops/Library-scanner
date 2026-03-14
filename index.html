@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="mn">
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -16,12 +16,12 @@ body { font-family: Arial; text-align: center; padding: 20px; }
 <h2>Library QR Scanner</h2>
 
 <select id="action">
-  <option value="Borrow">Borrow</option>
-  <option value="Return">Return</option>
+  <option value="Түрээслэх">Түрээслэх</option>
+  <option value="Буцаалт">Буцаалт</option>
 </select>
 
 <div id="reader"></div>
-<p id="status">Scan Student Card</p>
+<p id="status">Сурагчийн карт уншуулна уу</p>
 
 <script>
 let student = null;
@@ -40,13 +40,14 @@ function sendData() {
   })
   .then(response => response.text())
   .then(data => {
-    document.getElementById("status").innerText = `Recorded: ${action} (${student} → ${book})`;
+    document.getElementById("status").innerText = "Амжилттай бүртгэгдлээ.";
     student = null;
     book = null;
     startStudentScan();
   })
   .catch(err => {
     console.error(err);
+    document.getElementById("status").innerText = "Алдаа гарлаа! Дахин оролдоно уу.";
     student = null;
     book = null;
     startStudentScan();
@@ -56,31 +57,31 @@ function sendData() {
 // Start scanning Student
 function startStudentScan() {
   mode = "student";
-  document.getElementById("status").innerText = "Scan Student Card";
+  document.getElementById("status").innerText = "Сурагчийн карт уншуулна уу";
   scanner.start(cameraId, { fps: 15, qrbox: 250 }, onScanSuccess);
 }
 
 // Start scanning Book
 function startBookScan() {
   mode = "book";
-  document.getElementById("status").innerText = "Scan Book QR";
+  document.getElementById("status").innerText = "Номын QR уншуулна уу";
   scanner.start(cameraId, { fps: 15, qrbox: 200 }, onScanSuccess);
 }
 
 function onScanSuccess(decodedText) {
   if(mode === "student" && decodedText.startsWith("STU")) {
     student = decodedText;
-    document.getElementById("status").innerText = `Student scanned: ${student}. Now scan Book.`;
-    scanner.stop().then(() => startBookScan()); // Stop then restart for Book
+    document.getElementById("status").innerText = `Сурагч скан хийгдсэн: ${student}. Одоо ном уншуулна уу.`;
+    scanner.stop().then(() => startBookScan());
   } else if(mode === "book" && decodedText.startsWith("BOOK")) {
     if(!student) {
-      document.getElementById("status").innerText = "Scan student first!";
+      document.getElementById("status").innerText = "Эхлээд сурагчийн карт уншуулна уу!";
       return;
     }
     book = decodedText;
-    scanner.stop().then(() => sendData()); // Stop then send data
+    scanner.stop().then(() => sendData());
   } else {
-    document.getElementById("status").innerText = `Invalid QR: ${decodedText}`;
+    document.getElementById("status").innerText = `Буруу QR: ${decodedText}`;
   }
 }
 
