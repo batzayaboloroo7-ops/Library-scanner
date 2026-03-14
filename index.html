@@ -32,26 +32,27 @@ let scanner = null;
 let cameraId = null;
 let mode = "student";
 
+// Function to send data asynchronously, after showing success
 function sendData() {
   const action = document.getElementById("action").value;
+
+  // Show success message first
+  document.getElementById("status").innerText = "Амжилттай бүртгэгдлээ.";
+
+  // Delay restarting scanner so user sees the message
+  setTimeout(() => {
+    student = null;
+    book = null;
+    startStudentScan();
+  }, 1200); // 1.2 second delay
+
+  // Send data in background
   fetch(webAppUrl, {
     method: "POST",
     body: JSON.stringify({ student, book, action })
   })
   .then(response => response.text())
-  .then(data => {
-    document.getElementById("status").innerText = "Амжилттай бүртгэгдлээ.";
-    student = null;
-    book = null;
-    startStudentScan();
-  })
-  .catch(err => {
-    console.error(err);
-    document.getElementById("status").innerText = "Алдаа гарлаа! Дахин оролдоно уу.";
-    student = null;
-    book = null;
-    startStudentScan();
-  });
+  .catch(err => console.error("Error sending data:", err));
 }
 
 // Start scanning Student
@@ -91,6 +92,7 @@ Html5Qrcode.getCameras().then(cameras => {
   scanner = new Html5Qrcode("reader");
   startStudentScan();
 }).catch(err => console.error(err));
+
 </script>
 
 </body>
