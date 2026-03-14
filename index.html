@@ -1,16 +1,16 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Library QR Scanner</title>
-  <script src="https://unpkg.com/html5-qrcode"></script>
-  <style>
-    body { font-family: Arial; padding: 20px; text-align: center; }
-    #reader { width: 100%; max-width: 400px; margin: 20px auto; }
-    select, button { font-size: 16px; padding: 8px 12px; margin: 10px 0; }
-    #status { font-weight: bold; margin-top: 10px; }
-  </style>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Library QR Scanner</title>
+<script src="https://unpkg.com/html5-qrcode"></script>
+<style>
+  body { font-family: Arial; text-align: center; padding: 20px; }
+  #reader { width: 100%; max-width: 400px; margin: 20px auto; }
+  select, button { font-size: 16px; padding: 8px 12px; margin: 10px 0; }
+  #status { font-weight: bold; margin-top: 10px; }
+</style>
 </head>
 <body>
 
@@ -24,15 +24,16 @@
 
 <div id="reader"></div>
 <p id="status">Scan Student Card</p>
-<button id="restartBtn" style="display:none;">Restart Scanner</button>
 
 <script>
 let student = null;
 let book = null;
-
-// Replace with your Google Apps Script or API endpoint
 const webAppUrl = "https://script.google.com/macros/s/AKfycbxGyzvzc85-eMgc8vMpo1ybq-hVJkRECn2oxbes70ptnjWhz5NyuVTUqh_77UuQELV3iQ/exec"; 
 
+let scanner = null;
+let cameraId = null;
+
+// Function to send data to server
 function sendData() {
   const action = document.getElementById("action").value;
   fetch(webAppUrl, {
@@ -41,51 +42,61 @@ function sendData() {
   })
   .then(response => response.text())
   .then(data => {
-    document.getElementById("status").innerText = `Recorded: ${action}`;
+    document.getElementById("status").innerText = `Recorded: ${action} (${student} → ${book})`;
     student = null;
     book = null;
-    restartScanner();
+    startStudentScan();
   })
   .catch(err => {
     document.getElementById("status").innerText = "Error sending data!";
     console.error(err);
-    restartScanner();
+    startStudentScan();
   });
 }
 
-function onScanSuccess(decodedText, decodedResult) {
+// Function to handle each scan
+function onScanSuccess(decodedText) {
   if(decodedText.startsWith("STU")) {
-    student = decodedText;
-    document.getElementById("status").innerText = "Student scanned. Now scan book.";
+    if(!student) {
+      student = decodedText;
+      document.getElementById("status").innerText = `Student scanned: ${student}. Now scan Book.`;
+      scanner.clear().then(() => startBookScan());
+    }
   } else if(decodedText.startsWith("BOOK")) {
     if(!student) {
       document.getElementById("status").innerText = "Scan student first!";
       return;
     }
     book = decodedText;
-    sendData();
+    scanner.clear().then(() => sendData());
   } else {
     document.getElementById("status").innerText = `Invalid QR: ${decodedText}`;
   }
 }
 
-// Initialize QR scanner
-let scanner = new Html5QrcodeScanner(
-  "reader",
-  { fps: 15, qrbox: 200, rememberLastUsedCamera: true }
-);
-scanner.render(onScanSuccess);
-
-function restartScanner() {
-  scanner.clear().then(() => {
-    scanner.render(onScanSuccess);
-    document.getElementById("restartBtn").style.display = "none";
-    document.getElementById("status").innerText = "Scan Student Card";
+// Start scanning students
+function startStudentScan() {
+  document.getElementById("status").innerText = "Scan Student Card";
+  Html5Qrcode.getCameras().then(cameras => {
+    // Choose back camera automatically
+    cameraId = cameras.find(cam => cam.label.toLowerCase().includes("back"))?.id || cameras[0].id;
+    scanner = new Html5Qrcode("reader");
+    scanner.start(cameraId, { fps: 15, qrbox: 250 }, onScanSuccess);
   }).catch(err => console.error(err));
 }
 
-// Optional restart button for mobile
-document.getElementById("restartBtn").addEventListener("click", restartScanner);
+// Start scanning books
+function startBookScan() {
+  document.getElementById("status").innerText = "Scan Book QR";
+  Html5Qrcode.getCameras().then(cameras => {
+    cameraId = cameras.find(cam => cam.label.toLowerCase().includes("back"))?.id || cameras[0].id;
+    scanner = new Html5Qrcode("reader");
+    scanner.start(cameraId, { fps: 15, qrbox: 200 }, onScanSuccess);
+  }).catch(err => console.error(err));
+}
+
+// Initialize scanner on page load
+startStudentScan();
 </script>
 
 </body>
